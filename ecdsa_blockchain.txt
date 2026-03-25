@@ -1,0 +1,68 @@
+BLOCKCHAIN & ECDSA - GIẢI THÍCH TOÁN HỌC
+
+==================================== 1. TẠO KHÓA (KEY GENERATION)
+====================================
+
+Sử dụng đường cong elliptic (SECP256k1):
+
+y^2 = x^3 + 7 (mod p)
+
+Bước 1: Chọn số ngẫu nhiên d ∈ [1, n-1]
+
+→ d là PRIVATE KEY
+
+Bước 2: Tính PUBLIC KEY PublicKey = d × G
+
+Trong đó: - G: điểm cố định trên đường cong - ×: phép nhân vô hướng
+(cộng lặp lại)
+
+λ = (y₂ - y₁) / (x₂ - x₁)   (mod p)
+
+x₃ = λ² - x₁ - x₂
+y₃ = λ(x₁ - x₃) - y₁
+
+==================================== 2. KÝ (SIGNING)
+====================================
+
+Input: - message - private key d
+
+Bước 1: Hash message z = H(message)
+
+Bước 2: Chọn số ngẫu nhiên k
+
+Bước 3: Tính: R = k × G r = R.x
+
+Bước 4: Tính: s = k^(-1) * (z + r*d) mod n
+
+Signature = (r, s)
+
+==================================== 3. VERIFY (KIỂM TRA CHỮ KÝ)
+====================================
+
+Input: - message - signature (r, s) - public key Q
+
+Bước 1: Hash lại message z = H(message)
+
+Bước 2: w = s^(-1) mod n
+
+Bước 3: u1 = z * w u2 = r * w
+
+Bước 4: P = u1 × G + u2 × Q
+
+Bước 5: Signature hợp lệ nếu: P.x == r
+
+==================================== 4. GIẢI THÍCH BẢN CHẤT
+====================================
+
+-   Private key: số bí mật
+-   Public key: điểm trên elliptic curve
+-   Signature: bằng chứng toán học
+
+Không thể suy ra private key từ public key vì: → Bài toán Elliptic Curve
+Discrete Logarithm Problem (ECDLP)
+
+==================================== 5. TÓM TẮT
+====================================
+
+Private Key (d) ↓ Public Key = d × G ↓ Sign(message) → (r, s) ↓
+Verify(message, r, s, public key)
