@@ -1,7 +1,7 @@
 import hashlib
 import json
 import time
-from ecdsa import SigningKey, SECP256k1
+from ecdsa import SigningKey, VerifyingKey, SECP256k1
 
 
 # ======================
@@ -49,14 +49,21 @@ class Transaction:
         if self.sender == "SYSTEM":
             return True
 
-        try:
-            from ecdsa import VerifyingKey
+        if not self.signature:
+            return False
 
-            vk = VerifyingKey.from_string(bytes.fromhex(self.sender), curve=SECP256k1)
+        try:
+            vk = VerifyingKey.from_string(
+                bytes.fromhex(self.sender),
+                curve=SECP256k1
+            )
 
             message = json.dumps(self.to_dict(), sort_keys=True)
 
-            return vk.verify(bytes.fromhex(self.signature), message.encode())
+            return vk.verify(
+                bytes.fromhex(self.signature),
+                message.encode()
+            )
 
         except:
             return False
@@ -72,7 +79,10 @@ class Block:
 
         self.index = index
         self.timestamp = time.time()
-        self.transactions = transactions
+
+        # ⚠️ copy list để tránh bị sửa ngoài
+        self.transactions = transactions.copy()
+
         self.previous_hash = previous_hash
         self.nonce = 0
         self.hash = self.calculate_hash()
@@ -99,25 +109,47 @@ class Blockchain:
     difficulty = 4
 
     def __init__(self):
-
         self.chain = [self.create_genesis_block()]
         self.pending_transactions = []
 
     def create_genesis_block(self):
-
         return Block(0, [], "0")
 
     def get_latest_block(self):
-
         return self.chain[-1]
 
+    # ======================
+    # BALANCE (FIX DOUBLE SPEND)
+    # ======================
+    def get_balance(self, address):
+        balance = 0
+
+        for block in self.chain:
+            for tx in block.transactions:
+                if tx.sender == address:
+                    balance -= tx.amount
+                if tx.receiver == address:
+                    balance += tx.amount
+
+        return balance
+
+    # ======================
+    # ADD TRANSACTION
+    # ======================
     def add_transaction(self, transaction):
 
         if not transaction.is_valid():
             raise Exception("Invalid transaction")
 
+        if transaction.sender != "SYSTEM":
+            if self.get_balance(transaction.sender) < transaction.amount:
+                raise Exception("Not enough balance")
+
         self.pending_transactions.append(transaction)
 
+    # ======================
+    # MINING
+    # ======================
     def mine_pending_transactions(self, miner_address):
 
         reward_tx = Transaction("SYSTEM", miner_address, 10)
@@ -143,6 +175,9 @@ class Blockchain:
 
         print("Block mined:", block.hash)
 
+    # ======================
+    # VALIDATION (UPGRADE)
+    # ======================
     def is_chain_valid(self):
 
         for i in range(1, len(self.chain)):
@@ -150,36 +185,17 @@ class Blockchain:
             current = self.chain[i]
             previous = self.chain[i - 1]
 
+            # check hash
             if current.hash != current.calculate_hash():
                 return False
 
+            # check link
             if current.previous_hash != previous.hash:
                 return False
 
+            # 🔥 check transaction inside block
+            for tx in current.transactions:
+                if not tx.is_valid():
+                    return False
+
         return True
-
-
-# ======================
-# DEMO
-# ======================
-
-wallet1 = Wallet()
-wallet2 = Wallet()
-miner = Wallet()
-
-bc = Blockchain()
-
-tx1 = Transaction(wallet1.get_address(), wallet2.get_address(), 5)
-tx1.sign_transaction(wallet1)
-
-bc.add_transaction(tx1)
-
-bc.mine_pending_transactions(miner.get_address())
-
-print("Blockchain valid:", bc.is_chain_valid())
-
-# thử sửa dữ liệu
-
-bc.chain[1].transactions[0].amount = 500
-
-print("Blockchain valid after attack:", bc.is_chain_valid())
