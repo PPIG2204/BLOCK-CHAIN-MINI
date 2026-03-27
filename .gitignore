@@ -1,0 +1,20 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+ENV/
+env.bak/
+
+# Project specific data (Blockchain saves)
+*.json
+*.txt
+!ecdsa_blockchain.txt
+
+# Editor / OS temporary files
+.DS_Store
+.vscode/
+.idea/
+.~lock.*
