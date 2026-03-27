@@ -140,3 +140,46 @@ print("Dữ liệu đã tải thành công?")
 print("- Số khối trong chain:", len(new_bc.chain))
 print("- Blockchain hợp lệ:", new_bc.is_chain_valid())
 print("- Số dư w2 (phải là 5):", new_bc.get_balance(w2.get_address()))
+
+# ======================
+# DEMO 7: Mempool va Phi Giao Dich
+# ======================
+print("\n=== DEMO 7: Mempool va Phi Giao Dich ===")
+
+w1, w2, w3, bc = reset_env()
+miner_wallet = Wallet()
+
+# Dao 1 khoi de w1 co 10 coins
+bc.mine_pending_transactions(w1.get_address())
+
+# Tao 3 giao dich voi muc phi khac nhau
+tx_low_fee = Transaction(w1.get_address(), w2.get_address(), 2, fee=0.5)
+tx_low_fee.sign_transaction(w1)
+
+tx_high_fee = Transaction(w1.get_address(), w3.get_address(), 2, fee=2.0)
+tx_high_fee.sign_transaction(w1)
+
+tx_no_fee = Transaction(w1.get_address(), w2.get_address(), 2, fee=0)
+tx_no_fee.sign_transaction(w1)
+
+# Them vao mempool theo thu tu ngau nhien
+bc.add_transaction(tx_low_fee)
+bc.add_transaction(tx_no_fee)
+bc.add_transaction(tx_high_fee)
+
+# Kiem tra thu tu truoc khi dao
+print("Thu tu mempool truoc khi dao:")
+for tx in bc.pending_transactions:
+    print(f"- Gui: {tx.amount}, Phi: {tx.fee}")
+
+# Dao khoi (He thong se tu dong sap xep lai)
+bc.mine_pending_transactions(miner_wallet.get_address())
+
+# Kiem tra thu tu trong khoi vua duoc dao
+latest_block = bc.get_latest_block()
+print("\nThu tu giao dich trong khoi moi (Da sap xep):")
+for tx in latest_block.transactions[:-1]: # Bo qua giao dich thuong cua he thong
+    print(f"- Gui: {tx.amount}, Phi: {tx.fee}")
+
+# Kiem tra tien thuong cua tho dao (Phai la 10 + 0.5 + 2.0 + 0 = 12.5)
+print(f"\nSo du cua tho dao: {bc.get_balance(miner_wallet.get_address())}")

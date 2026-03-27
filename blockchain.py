@@ -27,47 +27,45 @@ class Wallet:
 
 class Transaction:
 
-    def __init__(self, sender, receiver, amount, signature=None):
+    def __init__(self, sender, receiver, amount, fee=0, signature=None):
         self.sender = sender
         self.receiver = receiver
         self.amount = amount
+        self.fee = fee
         self.signature = signature
 
     def to_dict(self):
         return {
             "sender": self.sender,
             "receiver": self.receiver,
-            "amount": self.amount
+            "amount": self.amount,
+            "fee": self.fee
         }
 
     def sign_transaction(self, wallet):
+        import json
         message = json.dumps(self.to_dict(), sort_keys=True)
         self.signature = wallet.sign(message)
 
     def is_valid(self):
-
         if self.sender == "SYSTEM":
             return True
-
         if not self.signature:
             return False
-
         try:
+            from ecdsa import VerifyingKey, SECP256k1
+            import json
             vk = VerifyingKey.from_string(
                 bytes.fromhex(self.sender),
                 curve=SECP256k1
             )
-
             message = json.dumps(self.to_dict(), sort_keys=True)
-
             return vk.verify(
                 bytes.fromhex(self.signature),
                 message.encode()
             )
-
         except:
             return False
-
 
 # ======================
 # BLOCK
@@ -123,36 +121,40 @@ class Blockchain:
     # ======================
     def get_balance(self, address):
         balance = 0
-
         for block in self.chain:
             for tx in block.transactions:
                 if tx.sender == address:
-                    balance -= tx.amount
+                    balance -= (tx.amount + tx.fee) # Tru ca tien va phi
                 if tx.receiver == address:
                     balance += tx.amount
-
         return balance
 
     # ======================
-    # ADD TRANSACTION
+    # ADD TRANSACTION (KIEM TRA CHI PHI)
     # ======================
     def add_transaction(self, transaction):
-
         if not transaction.is_valid():
-            raise Exception("Invalid transaction")
+            raise Exception("Giao dich khong hop le")
 
         if transaction.sender != "SYSTEM":
-            if self.get_balance(transaction.sender) < transaction.amount:
-                raise Exception("Not enough balance")
+            tong_chi_phi = transaction.amount + transaction.fee
+            if self.get_balance(transaction.sender) < tong_chi_phi:
+                raise Exception("Khong du so du de tra tien gui va phi")
 
         self.pending_transactions.append(transaction)
 
     # ======================
-    # MINING
+    # MINING (SAP XEP THEO PHI)
     # ======================
     def mine_pending_transactions(self, miner_address):
+        # 1. Sap xep mempool theo phi giam dan (Uu tien phi cao)
+        self.pending_transactions.sort(key=lambda tx: tx.fee, reverse=True)
 
-        reward_tx = Transaction("SYSTEM", miner_address, 10)
+        # 2. Tinh tong phi giao dich thu duoc trong khoi nay
+        tong_phi = sum(tx.fee for tx in self.pending_transactions if tx.sender != "SYSTEM")
+
+        # 3. Thuong cho tho dao = Thuong he thong (10) + Tong phi
+        reward_tx = Transaction("SYSTEM", miner_address, 10 + tong_phi)
         self.pending_transactions.append(reward_tx)
 
         block = Block(
@@ -162,19 +164,16 @@ class Blockchain:
         )
 
         self.mine_block(block)
-
         self.chain.append(block)
-
         self.pending_transactions = []
 
     def mine_block(self, block):
-
+        # thuc hien proof of work bang cach tim hash hop le
         while block.hash[:self.difficulty] != "0" * self.difficulty:
             block.nonce += 1
             block.hash = block.calculate_hash()
 
-        print("Block mined:", block.hash)
-
+        print("da dao thanh cong khoi:", block.hash)
     # ======================
     # VALIDATION (UPGRADE)
     # ======================
@@ -203,44 +202,46 @@ class Blockchain:
     # DATA PERSISTENCE
     # ======================
     def save_to_file(self, filename="blockchain_data.json"):
-            import json
-            chain_data = []
-            for block in self.chain:
-                block_dict = {
-                    "index": block.index,
-                    "timestamp": block.timestamp,
-                    "transactions": [
-                        {
-                            "sender": t.sender,
-                            "receiver": t.receiver,
-                            "amount": t.amount,
-                            "signature": t.signature
-                        } for t in block.transactions
-                    ],
-                    "previous_hash": block.previous_hash,
-                    "nonce": block.nonce,
-                    "hash": block.hash
-                }
-                chain_data.append(block_dict)
-            with open(filename, "w") as f:
-                json.dump(chain_data, f, indent=4)
-            print(f"--- Saved blockchain to {filename} ---")
+        import json
+        chain_data = []
+        for block in self.chain:
+            block_dict = {
+                "index": block.index,
+                "timestamp": block.timestamp,
+                "transactions": [
+                    {
+                        "sender": t.sender,
+                        "receiver": t.receiver,
+                        "amount": t.amount,
+                        "fee": t.fee, # Da them truong fee vao day
+                        "signature": t.signature
+                    } for t in block.transactions
+                ],
+                "previous_hash": block.previous_hash,
+                "nonce": block.nonce,
+                "hash": block.hash
+            }
+            chain_data.append(block_dict)
+        with open(filename, "w") as f:
+            json.dump(chain_data, f, indent=4)
+        print(f"--- Da luu blockchain vao {filename} ---")
 
     def load_from_file(self, filename="blockchain_data.json"):
         import json
         import os
         if not os.path.exists(filename):
-            print("No save file found.")
+            print("Khong tim thay file luu tru.")
             return
         with open(filename, "r") as f:
             chain_data = json.load(f)
         self.chain = []
         for block_dict in chain_data:
-            transactions = [Transaction(tx["sender"], tx["receiver"], tx["amount"], tx.get("signature")) 
+            # Da cap nhat de doc truong fee, mac dinh la 0 neu ban ghi cu khong co
+            transactions = [Transaction(tx["sender"], tx["receiver"], tx["amount"], tx.get("fee", 0), tx.get("signature")) 
                             for tx in block_dict["transactions"]]
             block = Block(block_dict["index"], transactions, block_dict["previous_hash"])
             block.timestamp = block_dict["timestamp"]
             block.nonce = block_dict["nonce"]
             block.hash = block_dict["hash"]
             self.chain.append(block)
-        print(f"--- Loaded blockchain from {filename} ---")
+        print(f"--- Da tai blockchain tu {filename} ---")
