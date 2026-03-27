@@ -199,3 +199,48 @@ class Blockchain:
                     return False
 
         return True
+    # ======================
+    # DATA PERSISTENCE
+    # ======================
+    def save_to_file(self, filename="blockchain_data.json"):
+            import json
+            chain_data = []
+            for block in self.chain:
+                block_dict = {
+                    "index": block.index,
+                    "timestamp": block.timestamp,
+                    "transactions": [
+                        {
+                            "sender": t.sender,
+                            "receiver": t.receiver,
+                            "amount": t.amount,
+                            "signature": t.signature
+                        } for t in block.transactions
+                    ],
+                    "previous_hash": block.previous_hash,
+                    "nonce": block.nonce,
+                    "hash": block.hash
+                }
+                chain_data.append(block_dict)
+            with open(filename, "w") as f:
+                json.dump(chain_data, f, indent=4)
+            print(f"--- Saved blockchain to {filename} ---")
+
+    def load_from_file(self, filename="blockchain_data.json"):
+        import json
+        import os
+        if not os.path.exists(filename):
+            print("No save file found.")
+            return
+        with open(filename, "r") as f:
+            chain_data = json.load(f)
+        self.chain = []
+        for block_dict in chain_data:
+            transactions = [Transaction(tx["sender"], tx["receiver"], tx["amount"], tx.get("signature")) 
+                            for tx in block_dict["transactions"]]
+            block = Block(block_dict["index"], transactions, block_dict["previous_hash"])
+            block.timestamp = block_dict["timestamp"]
+            block.nonce = block_dict["nonce"]
+            block.hash = block_dict["hash"]
+            self.chain.append(block)
+        print(f"--- Loaded blockchain from {filename} ---")
