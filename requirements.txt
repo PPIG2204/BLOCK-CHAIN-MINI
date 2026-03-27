@@ -1,0 +1,8 @@
+# Cryptography for Wallet and Transaction Signing
+ecdsa==0.19.0
+
+# Web Framework for the Blockchain API
+Flask==3.0.3
+
+# HTTP Library for node communication (if adding P2P later)
+requests==2.32.3
