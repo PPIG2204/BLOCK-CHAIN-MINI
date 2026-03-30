@@ -43,7 +43,6 @@ class Transaction:
         }
 
     def sign_transaction(self, wallet):
-        import json
         message = json.dumps(self.to_dict(), sort_keys=True)
         self.signature = wallet.sign(message)
 
@@ -53,8 +52,6 @@ class Transaction:
         if not self.signature:
             return False
         try:
-            from ecdsa import VerifyingKey, SECP256k1
-            import json
             vk = VerifyingKey.from_string(
                 bytes.fromhex(self.sender),
                 curve=SECP256k1
