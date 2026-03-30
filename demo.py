@@ -4,7 +4,6 @@ from blockchain import Wallet, Transaction, Blockchain
 # ======================
 # RESET ENV
 # ======================
-
 def reset_env():
     wallet1 = Wallet()
     wallet2 = Wallet()
@@ -14,172 +13,185 @@ def reset_env():
 
 
 # ======================
-# DEMO 1: Giao dịch hợp lệ (đã fix)
+# DEMO 1
 # ======================
-wallet1, wallet2, miner, bc = reset_env()
+def demo1():
+    wallet1, wallet2, miner, bc = reset_env()
 
-print("\n=== DEMO 1: Giao dịch hợp lệ ===")
+    print("\n=== DEMO 1: Giao dịch hợp lệ ===")
 
-# HOTFIX: Đào 1 block cho wallet1 để wallet1 có tiền (reward mặc định là 10)
-bc.mine_pending_transactions(wallet1.get_address()) 
+    bc.mine_pending_transactions(wallet1.get_address())
 
-# Bây giờ wallet1 đã có 10, có thể gửi 5 cho wallet2
-tx1 = Transaction(wallet1.get_address(), wallet2.get_address(), 5)
-tx1.sign_transaction(wallet1)
+    tx1 = Transaction(wallet1.get_address(), wallet2.get_address(), 5)
+    tx1.sign_transaction(wallet1)
 
-bc.add_transaction(tx1)
-bc.mine_pending_transactions(miner.get_address())
-
-print("Blockchain valid:", bc.is_chain_valid())
-print("Balance wallet1:", bc.get_balance(wallet1.get_address()))
-
-# ======================
-# DEMO 2: Sửa dữ liệu (attack)
-# ======================
-
-print("\n=== DEMO 2: Sửa dữ liệu (attack) ===")
-
-# sửa dữ liệu trong block
-bc.chain[1].transactions[0].amount = 500
-
-print("Blockchain valid after attack:", bc.is_chain_valid())
-
-
-# ======================
-# DEMO 3: Chữ ký không hợp lệ
-# ======================
-
-wallet1, wallet2, miner, bc = reset_env()
-
-print("\n=== DEMO 3: Chữ ký không hợp lệ ===")
-
-fake_tx = Transaction(wallet1.get_address(), wallet2.get_address(), 10)
-
-# ❌ ký sai (wallet2 ký thay vì wallet1)
-fake_tx.sign_transaction(wallet2)
-
-try:
-    bc.add_transaction(fake_tx)
-except Exception as e:
-    print("Rejected transaction:", e)
-
-
-# ======================
-# DEMO 4: Double Spending (đã fix)
-# ======================
-wallet1, wallet2, miner, bc = reset_env()
-
-print("\n=== DEMO 4: Double Spending (chưa fix) ===")
-
-# HOTFIX: Đào 1 block để wallet1 có tiền (10 coins)
-bc.mine_pending_transactions(wallet1.get_address())
-
-tx1 = Transaction(wallet1.get_address(), wallet2.get_address(), 10)
-tx1.sign_transaction(wallet1)
-
-tx2 = Transaction(wallet1.get_address(), wallet2.get_address(), 10)
-tx2.sign_transaction(wallet1)
-
-bc.add_transaction(tx1)
-bc.add_transaction(tx2)  # Trong DEMO 4, logic này sẽ lỗi nếu ví không đủ 20
-
-bc.mine_pending_transactions(miner.get_address())
-print("Blockchain valid:", bc.is_chain_valid())
-
-# ======================
-# DEMO 5: Double Spending (đã fix)
-# ======================
-
-wallet1, wallet2, miner, bc = reset_env()
-
-print("\n=== DEMO 5: Double Spending (đã fix) ===")
-
-# đào 1 block để wallet1 có tiền
-bc.mine_pending_transactions(wallet1.get_address())
-
-print("Balance wallet1:", bc.get_balance(wallet1.get_address()))
-
-tx1 = Transaction(wallet1.get_address(), wallet2.get_address(), 10)
-tx1.sign_transaction(wallet1)
-
-tx2 = Transaction(wallet1.get_address(), wallet2.get_address(), 10)
-tx2.sign_transaction(wallet1)
-
-try:
     bc.add_transaction(tx1)
-    bc.add_transaction(tx2)  # ❌ sẽ bị chặn nếu đã fix balance
-except Exception as e:
-    print("Rejected transaction:", e)
+    bc.mine_pending_transactions(miner.get_address())
 
-bc.mine_pending_transactions(miner.get_address())
+    print("Blockchain valid:", bc.is_chain_valid())
+    print("Balance wallet1:", bc.get_balance(wallet1.get_address()))
 
-print("Blockchain valid:", bc.is_chain_valid())
 
 # ======================
-# DEMO 6: Data Persistence
+# DEMO 2
 # ======================
-print("\n=== DEMO 6: Data Persistence ===")
+def demo2():
+    wallet1, wallet2, miner, bc = reset_env()
 
-# 1. Setup và tạo dữ liệu
-w1, w2, miner, bc_persist = reset_env()
-bc_persist.mine_pending_transactions(w1.get_address()) # w1 nhận 10 coins
+    print("\n=== DEMO 2: Sửa dữ liệu (attack) ===")
 
-tx = Transaction(w1.get_address(), w2.get_address(), 5)
-tx.sign_transaction(w1)
-bc_persist.add_transaction(tx)
-bc_persist.mine_pending_transactions(miner.get_address())
+    bc.mine_pending_transactions(wallet1.get_address())
 
-# 2. Lưu vào file
-bc_persist.save_to_file("blockchain_save.json")
+    tx = Transaction(wallet1.get_address(), wallet2.get_address(), 5)
+    tx.sign_transaction(wallet1)
 
-# 3. Tạo instance mới và tải lại
-new_bc = Blockchain()
-new_bc.load_from_file("blockchain_save.json")
+    bc.add_transaction(tx)
+    bc.mine_pending_transactions(miner.get_address())
 
-print("Dữ liệu đã tải thành công?")
-print("- Số khối trong chain:", len(new_bc.chain))
-print("- Blockchain hợp lệ:", new_bc.is_chain_valid())
-print("- Số dư w2 (phải là 5):", new_bc.get_balance(w2.get_address()))
+    bc.chain[1].transactions[0].amount = 500
+
+    print("Blockchain valid after attack:", bc.is_chain_valid())
+
 
 # ======================
-# DEMO 7: Mempool va Phi Giao Dich
+# DEMO 3
 # ======================
-print("\n=== DEMO 7: Mempool va Phi Giao Dich ===")
+def demo3():
+    wallet1, wallet2, miner, bc = reset_env()
 
-w1, w2, w3, bc = reset_env()
-miner_wallet = Wallet()
+    print("\n=== DEMO 3: Chữ ký không hợp lệ ===")
 
-# Dao 1 khoi de w1 co 10 coins
-bc.mine_pending_transactions(w1.get_address())
+    fake_tx = Transaction(wallet1.get_address(), wallet2.get_address(), 10)
+    fake_tx.sign_transaction(wallet2)
 
-# Tao 3 giao dich voi muc phi khac nhau
-tx_low_fee = Transaction(w1.get_address(), w2.get_address(), 2, fee=0.5)
-tx_low_fee.sign_transaction(w1)
+    try:
+        bc.add_transaction(fake_tx)
+    except Exception as e:
+        print("Rejected transaction:", e)
 
-tx_high_fee = Transaction(w1.get_address(), w3.get_address(), 2, fee=2.0)
-tx_high_fee.sign_transaction(w1)
 
-tx_no_fee = Transaction(w1.get_address(), w2.get_address(), 2, fee=0)
-tx_no_fee.sign_transaction(w1)
+# ======================
+# DEMO 4
+# ======================
+def demo4():
+    wallet1, wallet2, miner, bc = reset_env()
 
-# Them vao mempool theo thu tu ngau nhien
-bc.add_transaction(tx_low_fee)
-bc.add_transaction(tx_no_fee)
-bc.add_transaction(tx_high_fee)
+    print("\n=== DEMO 4: Double Spending (chưa fix) ===")
 
-# Kiem tra thu tu truoc khi dao
-print("Thu tu mempool truoc khi dao:")
-for tx in bc.pending_transactions:
-    print(f"- Gui: {tx.amount}, Phi: {tx.fee}")
+    bc.mine_pending_transactions(wallet1.get_address())
 
-# Dao khoi (He thong se tu dong sap xep lai)
-bc.mine_pending_transactions(miner_wallet.get_address())
+    tx1 = Transaction(wallet1.get_address(), wallet2.get_address(), 10)
+    tx1.sign_transaction(wallet1)
 
-# Kiem tra thu tu trong khoi vua duoc dao
-latest_block = bc.get_latest_block()
-print("\nThu tu giao dich trong khoi moi (Da sap xep):")
-for tx in latest_block.transactions[:-1]: # Bo qua giao dich thuong cua he thong
-    print(f"- Gui: {tx.amount}, Phi: {tx.fee}")
+    tx2 = Transaction(wallet1.get_address(), wallet2.get_address(), 10)
+    tx2.sign_transaction(wallet1)
 
-# Kiem tra tien thuong cua tho dao (Phai la 10 + 0.5 + 2.0 + 0 = 12.5)
-print(f"\nSo du cua tho dao: {bc.get_balance(miner_wallet.get_address())}")
+    bc.add_transaction(tx1)
+    bc.add_transaction(tx2)
+
+    bc.mine_pending_transactions(miner.get_address())
+
+    print("Blockchain valid:", bc.is_chain_valid())
+    print("Balance wallet1:", bc.get_balance(wallet1.get_address()))
+
+
+# ======================
+# DEMO 5
+# ======================
+def demo5():
+    wallet1, wallet2, miner, bc = reset_env()
+
+    print("\n=== DEMO 5: Double Spending (đã fix) ===")
+
+    bc.mine_pending_transactions(wallet1.get_address())
+
+    print("Balance wallet1:", bc.get_balance(wallet1.get_address()))
+
+    tx1 = Transaction(wallet1.get_address(), wallet2.get_address(), 10)
+    tx1.sign_transaction(wallet1)
+
+    tx2 = Transaction(wallet1.get_address(), wallet2.get_address(), 10)
+    tx2.sign_transaction(wallet1)
+
+    try:
+        bc.add_transaction(tx1)
+        bc.add_transaction(tx2)
+    except Exception as e:
+        print("Rejected transaction:", e)
+
+    bc.mine_pending_transactions(miner.get_address())
+
+    print("Blockchain valid:", bc.is_chain_valid())
+
+
+# ======================
+# DEMO 6
+# ======================
+def demo6():
+    print("\n=== DEMO 6: Data Persistence ===")
+
+    w1, w2, miner, bc = reset_env()
+
+    bc.mine_pending_transactions(w1.get_address())
+
+    tx = Transaction(w1.get_address(), w2.get_address(), 5)
+    tx.sign_transaction(w1)
+
+    bc.add_transaction(tx)
+    bc.mine_pending_transactions(miner.get_address())
+
+    bc.save_to_file("blockchain_save.json")
+
+    new_bc = Blockchain()
+    new_bc.load_from_file("blockchain_save.json")
+
+    print("Số block:", len(new_bc.chain))
+    print("Valid:", new_bc.is_chain_valid())
+    print("Balance w2:", new_bc.get_balance(w2.get_address()))
+
+
+# ======================
+# MENU (SWITCH CASE)
+# ======================
+def main():
+    demos = {
+        "1": demo1,
+        "2": demo2,
+        "3": demo3,
+        "4": demo4,
+        "5": demo5,
+        "6": demo6,
+    }
+
+    while True:
+        print("""
+========= MENU =========
+1. Giao dịch hợp lệ
+2. Attack (sửa dữ liệu)
+3. Chữ ký sai
+4. Double Spending (chưa fix)
+5. Double Spending (đã fix)
+6. Data Persistence
+0. Thoát
+========================
+""")
+
+        choice = input("Chọn demo: ")
+
+        if choice == "0":
+            print("Thoát chương trình...")
+            break
+
+        elif choice in demos:
+            demos[choice]()
+        else:
+            print("Lựa chọn không hợp lệ!")
+
+        input("\nNhấn Enter để tiếp tục...")
+
+
+# ======================
+# RUN
+# ======================
+if __name__ == "__main__":
+    main()
